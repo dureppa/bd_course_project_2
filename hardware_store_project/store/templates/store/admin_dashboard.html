@@ -1,3 +1,4 @@
+{% load custom_filters %}
 <!DOCTYPE html>
 <html lang="ru">
 
@@ -51,14 +52,18 @@
                                 <td>
                                     <select class="form-select form-select-sm"
                                         onchange="updateOrderStatus({{ order.order_id }}, this.value)">
-                                        <option value="new" {% if order.order_status=="new" %}selected{% endif %}>Новый
+                                        <option value="new" {% if order.order_status == "new" %}selected{% endif %}>
+                                            Новый
                                         </option>
-                                        <option value="in_progress" {% if order.order_status=='in_progress' %}selected{%
-                                            endif %}>В работе</option>
-                                        <option value="shipped" {% if order.order_status=='shipped' %}selected{% endif
-                                            %}>Отправлен</option>
-                                        <option value="delivered" {% if order.order_status=='delivered' %}selected{%
-                                            endif %}>Доставлен</option>
+                                        <option value="in_progress" {% if order.order_status == "in_progress" %}selected{% endif %}>
+                                            В работе
+                                        </option>
+                                        <option value="shipped" {% if order.order_status == "shipped" %}selected{% endif %}>
+                                            Отправлен
+                                        </option>
+                                        <option value="delivered" {% if order.order_status == "delivered" %}selected{% endif %}>
+                                            Доставлен
+                                        </option>
                                     </select>
                                 </td>
                                 <td>{{ order.total_amount }} ₽</td>

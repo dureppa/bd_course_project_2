@@ -34,19 +34,7 @@ def admin_dashboard(request):
     discounts = list(Discounts.objects.all())
     categories = list(Categories.objects.all())
 
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT p.product_id, p.product_name, p.product_price_for_sale, 
-                   c.category_name, p.refund_possibility
-            FROM products p
-            JOIN categories c ON p.category_id = c.category_id;
-        """)
-        columns = [col[0] for col in cursor.description]
-        products = []
-        for row in cursor.fetchall():
-            d = dict(zip(columns, row))
-            d['product_price_for_sale'] = float(d['product_price_for_sale'])
-            products.append(d)
+    products = Products.objects.select_related('category').all()
 
     with connection.cursor() as cursor:
         cursor.execute("""

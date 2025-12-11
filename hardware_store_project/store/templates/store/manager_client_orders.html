@@ -1,172 +1,240 @@
-<!-- templates/store/manager_client_orders.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Заказы клиента {{ client.client_fio }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Заказы клиента — {{ client.client_fio }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .table thead { background-color: #212529; color: white; }
+        .badge-status { font-size: 0.85em; padding: 0.4em 0.8em; }
+        .price-was { font-size: 0.85em; color: #6c757d; }
+    </style>
 </head>
-<body class="bg-light">
-    <div class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2>Заказы клиента: {{ client.client_fio }}</h2>
-            <a href="{% url 'logout' %}" class="btn btn-secondary">Выйти</a>
-        </div>
-        <p><strong>Телефон:</strong> {{ client.client_phone|default:"Не указан" }}</p>
-        <p><strong>Ваш менеджер:</strong> {{ manager.employee_name }} ({{ manager.employee_phone|default:"нет телефона" }})</p>
+<body>
+<div class="container py-5">
 
-        <h4 class="mt-4">Список заказов:</h4>
+    <!-- Шапка -->
+    <div class="bg-white shadow-sm border-bottom">
+        <div class="container py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">Заказы клиента</h4>
+                    <h5 class="mb-0">{{ client.client_fio }}</h5>
+                    <small class="text-muted">
+                        Телефон: {{ client.client_phone|default:"не указан" }}
+                    </small>
+                </div>
+                <div class="text-end">
+                    <div class="text-muted small">Ваш менеджер:</div>
+                    <strong>{{ manager.employee_name }}</strong>
+                    <br>
+                    <a href="{% url 'manager_dashboard' manager.employee_id %}" class="btn btn-outline-secondary btn-sm mt-2">
+                        <i class="bi bi-arrow-left"></i> Назад к клиентам
+                    </a>
+                    <a href="{% url 'logout' %}" class="btn btn-danger btn-sm mt-2">Выйти</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Таблица заказов -->
+    <div class="container mt-4">
         {% if orders_data %}
             <div class="table-responsive">
-                <table class="table table-bordered table-striped">
+                <table class="table table-hover align-middle">
                     <thead class="table-dark">
                         <tr>
-                            <th>ID</th>
-                            <th>Дата</th>
-                            <th>Статус заказа</th>
+                            <th>#</th>
+                            <th>Дата и время</th>
+                            <th>Статус</th>
                             <th>Канал</th>
-                            <th>Сумма</th>
+                            <th class="text-end">Сумма</th>
                             <th>Скидка</th>
+                            <th>Итого</th>
                             <th>Отзыв</th>
-                            <th>Действия</th>
+                            <th width="180">Действия</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for order in orders_data %}
                         <tr>
-                            <td>{{ order.order_id }}</td>
+                            <td><strong>{{ order.order_id }}</strong></td>
                             <td>{{ order.order_time|date:"d.m.Y H:i" }}</td>
                             <td>
-                                <select class="form-select form-select-sm status-select" data-order-id="{{ order.order_id }}">
-                                    <option value="new" {% if order.order_status == 'new' %}selected{% endif %}>Новый</option>
-                                    <option value="in_progress" {% if order.order_status == 'in_progress' %}selected{% endif %}>В работе</option>
-                                    <option value="shipped" {% if order.order_status == 'shipped' %}selected{% endif %}>Отправлен</option>
-                                    <option value="delivered" {% if order.order_status == 'delivered' %}selected{% endif %}>Доставлен</option>
+                                <select class="form-select form-select-sm status-select"
+                                        data-order-id="{{ order.order_id }}">
+                                    <option value="new"        {% if order.order_status == 'new' %}selected{% endif %}>Новый</option>
+                                    <option value="in_progress"{% if order.order_status == 'in_progress' %}selected{% endif %}>В работе</option>
+                                    <option value="shipped"   {% if order.order_status == 'shipped' %}selected{% endif %}>Отправлен</option>
+                                    <option value="delivered" {% if order.order.order_status == 'delivered' %}selected{% endif %}>Доставлен</option>
                                 </select>
                             </td>
                             <td>{{ order.order_channel }}</td>
-                            <td>{{ order.total_amount }} ₽</td>
+                            <td class="text-end text-muted price-was">
+                                {{ order.total_amount|floatformat:2 }} ₽
+                            </td>
                             <td>
-                                <select class="form-select form-select-sm discount-select" data-order-id="{{ order.order_id }}">
+                                <select class="form-select form-select-sm discount-select"
+                                        data-order-id="{{ order.order_id }}">
                                     <option value="">Без скидки</option>
-                                    {% for discount in discounts %}
-                                    <option value="{{ discount.discount_id }}" {% if order.discount_id == discount.discount_id %}selected{% endif %}>{{ discount.discount_name }} ({{ discount.discount_percent }}%)</option>
+                                    {% for d in discounts %}
+                                        <option value="{{ d.discount_id }}"
+                                            {% if order.discount_id == d.discount_id %}selected{% endif %}>
+                                            {{ d.discount_name }} ({{ d.discount_percent }}%)
+                                        </option>
                                     {% endfor %}
                                 </select>
                             </td>
-                            <td>{{ order.client_feedback|default:"—" }}</td>
+                            <td class="text-end fw-bold text-success">
+                                {{ order.final_amount_with_discount|floatformat:2 }} ₽
+                            </td>
                             <td>
-                                <button class="btn btn-sm btn-warning refund-btn" data-order-id="{{ order.order_id }}">Оформить возврат</button>
+                                {% if order.client_feedback %}
+                                    <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+                                            data-bs-target="#feedbackModal{{ order.order_id }}">
+                                        Показать отзыв
+                                    </button>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-warning btn-sm refund-btn"
+                                        data-order-id="{{ order.order_id }}"
+                                        {% if order.order_status == 'delivered' %}disabled{% endif %}>
+                                    Оформить возврат
+                                </button>
                             </td>
                         </tr>
+
+                        <!-- Модалка с отзывом -->
+                        {% if order.client_feedback %}
+                        <div class="modal fade" id="feedbackModal{{ order.order_id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h6 class="modal-title">Отзыв по заказу #{{ order.order_id }}</h6>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        {{ order.client_feedback|linebreaks }}
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         {% else %}
-            <div class="alert alert-info">
-                У клиента пока нет заказов.
+            <div class="alert alert-info text-center py-5">
+                <i class="bi bi-inbox display-4"></i>
+                <p class="mt-3">У клиента пока нет заказов</p>
             </div>
         {% endif %}
-
-        <a href="{% url 'manager_dashboard' manager.employee_id %}" class="btn btn-secondary mt-3">
-            ← Назад к списку клиентов
-        </a>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            $('.status-select').change(function() {
-                const orderId = $(this).data('order-id');
-                const newStatus = $(this).val();
+</div>
 
-                if (!confirm(`Изменить статус заказа #${orderId} на "${newStatus}"?`)) {
-                    return;
-                }
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-                $.ajax({
-                    url: '{% url "manager_update_order_status" %}',
-                    type: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'Content-Type': 'application/json'
-                    },
-                    data: JSON.stringify({
-                        order_id: orderId,
-                        new_status: newStatus
-                    }),
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            alert(`Статус заказа #${orderId} успешно обновлён!`);
-                        } else {
-                            alert('Ошибка: ' + (response.message || 'неизвестная'));
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        alert('Ошибка при обновлении статуса: ' + error);
-                    }
-                });
-            });
+<script>
+// Глобальная переменная для CSRF-токена (Django его вставляет в шаблон)
+const CSRF_TOKEN = '{{ csrf_token }}';
 
-            $('.refund-btn').click(function() {
-                const orderId = $(this).data('order-id');
-                if (confirm(`Оформить возврат по заказу #${orderId}? Товары вернутся на склад.`)) {
-                    $.ajax({
-                        url: '{% url "manager_process_refund" %}',
-                        type: 'POST',
-                        headers: {
-                            'X-CSRFToken': '{{ csrf_token }}',
-                            'Content-Type': 'application/json'
-                        },
-                        data: JSON.stringify({
-                            order_id: orderId
-                        }),
-                        success: function(response) {
-                            if (response.status === 'success') {
-                                alert(response.message || 'Возврат успешно оформлен!');
-                                location.reload();
-                            } else {
-                                alert('Ошибка: ' + (response.message || 'неизвестная'));
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            alert('Ошибка при оформлении возврата: ' + error);
-                        }
-                    });
-                }
-            });
+// Утилита для AJAX-запросов
+function ajaxRequest(url, data, successMsg = null) {
+    return $.ajax({
+        url: url,
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(res) {
+            if (res.status === 'success') {
+                if (successMsg) alert(successMsg);
+                location.reload(); // Обновляем страницу — всё сразу актуально
+            } else {
+                alert('Ошибка: ' + (res.message || 'неизвестная ошибка'));
+            }
+        },
+        error: function(xhr) {
+            const msg = xhr.responseJSON?.message || 'Серверная ошибка';
+            alert('Ошибка: ' + msg);
+        }
+    });
+}
 
-            $('.discount-select').change(function() {
-                const orderId = $(this).data('order-id');
-                const discountId = $(this).val() || null;
-                
-                $.ajax({
-                    url: '{% url "manager_update_discount" %}',
-                    type: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'Content-Type': 'application/json'
-                    },
-                    data: JSON.stringify({
-                        order_id: orderId,
-                        discount_id: discountId
-                    }),
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            location.reload();
-                        } else {
-                            alert('Ошибка: ' + (response.message || 'неизвестная'));
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        alert('Ошибка при обновлении скидки: ' + error);
-                    }
-                });
-            });
-        });
-    </script>
-</body>
-</html>
+// 1. Смена статуса заказа
+$(document).on('change', '.status-select', function() {
+    const orderId = $(this).data('order-id');
+    const newStatus = $(this).val();
+    const statusText = $(this).find('option:selected').text();
 
+    if (!confirm(`Изменить статус заказа №${orderId} на "${statusText}"?`)) {
+        $(this).val($(this).data('current') || 'new');
+        return;
+    }
+
+    // Сохраняем текущий статус на случай отмены
+    $(this).data('current', newStatus);
+
+    ajaxRequest(
+        '{% url "manager_update_order_status" %}',
+        { order_id: orderId, new_status: newStatus },
+        `Статус заказа №${orderId} изменён на "${statusText}"`
+    );
+});
+
+// 2. Смена скидки
+$(document).on('change', '.discount-select', function() {
+    const orderId = $(this).data('order-id');
+    const discountId = $(this).val() || null; // null = без скидки
+
+    ajaxRequest(
+        '{% url "manager_update_discount" %}',
+        { order_id: orderId, discount_id: discountId },
+        'Скидка успешно применена'
+    );
+});
+
+// 3. Оформить возврат — ПОЛНОЕ УДАЛЕНИЕ заказа + возврат товаров
+$(document).on('click', '.refund-btn', function() {
+    const orderId = $(this).data('order-id');
+    const $btn = $(this);
+
+    if ($btn.prop('disabled')) {
+        alert('Этот заказ уже доставлен — возврат невозможен');
+        return;
+    }
+
+    if (!confirm(`ВНИМАНИЕ!\n\nЗаказ №${orderId} будет ПОЛНОСТЬЮ УДАЛЁН.\nВсе товары вернутся на склад.\n\nПродолжить?`)) {
+        return;
+    }
+
+    $btn.prop('disabled', true).text('Удаляется...');
+
+    ajaxRequest(
+        '{% url "manager_process_refund" %}',
+        { order_id: orderId },
+        `Заказ №${orderId} успешно удалён и товары возвращены на склад!`
+    ).always(function() {
+        $btn.prop('disabled', false).text('Оформить возврат');
+    });
+});
+
+// При загрузке страницы сохраняем текущие статусы (на случай отмены)
+$(document).ready(function() {
+    $('.status-select').each(function() {
+        $(this).data('current', $(this).val());
+    });
+});
+</script>

@@ -1,3 +1,31 @@
+-- Удаляем старую версию (если есть)
+DROP VIEW IF EXISTS orders_with_details;
+
+-- Создаём правильную версию с discount_id
+CREATE OR REPLACE VIEW orders_with_details AS
+SELECT
+    o.order_id,
+    o.order_time,
+    o.order_status,
+    o.order_channel,
+    o.order_finished,
+    c.client_id,
+    c.client_fio AS client_name,
+    c.client_phone,
+    e.employee_name AS handler_name,
+    d.discount_name,
+    d.discount_percent,
+    r.redactor_name AS redactor_name,
+    o.refund_status,
+    o.client_feedback,
+    o.discount_id,                                      -- ВАЖНО: вот это поле
+    get_order_total_amount(o.order_id) AS total_amount
+FROM orders o
+JOIN clients c ON o.client_id = c.client_id
+LEFT JOIN employees e ON o.employee_id = e.employee_id
+LEFT JOIN discounts d ON o.discount_id = d.discount_id
+LEFT JOIN redactors r ON o.redactor_id = r.redactor_id;
+
 -- Функция получения общей суммы заказа
 CREATE OR REPLACE FUNCTION get_order_total_amount(order_id_param INTEGER)
 RETURNS NUMERIC(12, 2) AS $$
@@ -195,8 +223,14 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     UPDATE orders
-    SET order_status = new_status
+    SET order_status = new_status::ORDER_STATUS
     WHERE order_id = order_id_param;
+
+    IF new_status = 'delivered' THEN
+        UPDATE orders
+        SET order_finished = TRUE
+        WHERE order_id = order_id_param;
+    END IF;
 END;
 $$;
 
