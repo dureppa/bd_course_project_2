@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Каталог товаров</title>
+</head>
+
+<body>
+  <h1>Доступные товары</h1>
+
+  <a href="{% url 'client_dashboard' client_id=client_id %}">
+    <button>← Назад в кабинет</button>
+  </a>
+
+  <div id="products"></div>
+  <a href="{% url 'cart' client_id=client_id %}">Корзина</a>
+
+  {% csrf_token %}
+  <script>
+    const clientId = {{ client_id| safe }};
+
+    fetch('{% url "available_products_api" %}', {
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+      },
+    })
+      .then(r => r.json())
+      .then(products => {
+        const div = document.getElementById('products');
+        div.innerHTML = products.map(p => `
+                    <div style="border:1px solid #eee; margin:10px; padding:10px;">
+                        <strong>${p.product_name}</strong><br>
+                        Доступно: ${p.available_quantity} шт.<br>
+                        Цена: ${p.product_price_for_sale} руб.<br>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <button onclick="decreaseQty(${p.product_id})" id="minus-${p.product_id}" style="width: 30px;">-</button>
+                            <span id="qty-${p.product_id}" style="min-width: 20px; text-align: center;">1</span>
+                            <button onclick="increaseQty(${p.product_id}, ${p.available_quantity})" id="plus-${p.product_id}" style="width: 30px;">+</button>
+                        </div>
+                        <button onclick="addToCart(${p.product_id}, ${p.lot_id}, ${clientId})">Добавить</button>
+                    </div>
+                `).join('');
+
+        products.forEach(p => {
+          updateButtonState(p.product_id, p.available_quantity);
+        });
+      });
+
+    function decreaseQty(productId) {
+      const qtyEl = document.getElementById(`qty-${productId}`);
+      let qty = parseInt(qtyEl.textContent);
+      if (qty > 1) {
+        qty--;
+        qtyEl.textContent = qty;
+        updateButtonState(productId, getAvailableQty(productId));
+      }
+    }
+
+    function increaseQty(productId, maxQty) {
+      const qtyEl = document.getElementById(`qty-${productId}`);
+      let qty = parseInt(qtyEl.textContent);
+      if (qty < maxQty) {
+        qty++;
+        qtyEl.textContent = qty;
+        updateButtonState(productId, maxQty);
+      }
+    }
+
+    function updateButtonState(productId, maxQty) {
+      const qtyEl = document.getElementById(`qty-${productId}`);
+      const minusBtn = document.getElementById(`minus-${productId}`);
+      const plusBtn = document.getElementById(`plus-${productId}`);
+
+      const qty = parseInt(qtyEl.textContent);
+
+      minusBtn.disabled = qty <= 1;
+      plusBtn.disabled = qty >= maxQty;
+
+      minusBtn.style.opacity = qty <= 1 ? '0.5' : '1';
+      plusBtn.style.opacity = qty >= maxQty ? '0.5' : '1';
+    }
+
+    function getAvailableQty(productId) {
+      const qtyEl = document.getElementById(`qty-${productId}`);
+      const container = qtyEl.closest('div[style*="border"]');
+      const text = container.innerHTML;
+      const match = text.match(/Доступно: (\d+)/);
+      return match ? parseInt(match[1]) : 0;
+    }
+
+    function addToCart(product_id, lot_id, client_id) {
+      const qtyEl = document.getElementById(`qty-${product_id}`);
+      const quantity = parseInt(qtyEl.textContent);
+
+      fetch('{% url "add_to_cart" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        body: JSON.stringify({
+          product_id: product_id,
+          lot_id: lot_id,
+          quantity: quantity,
+          client_id: client_id,
+        }),
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'success') {
+            alert('Товар добавлен в корзину!');
+            document.getElementById(`qty-${product_id}`).textContent = '1';
+            updateButtonState(product_id, getAvailableQty(product_id));
+          } else {
+            alert('Ошибка: ' + data.message);
+          }
+        });
+    }
+  </script>
+</body>
+
+</html>

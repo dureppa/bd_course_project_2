@@ -1,0 +1,109 @@
+<!-- store/templates/store/client_dashboard.html -->
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Кабинет клиента</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .order {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .item {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+
+        button {
+            margin: 10px 0;
+            padding: 10px 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>Добро пожаловать, {{ client.client_fio }}!</h1>
+        <a href="{% url 'logout' %}" style="padding: 10px 20px; background: #6c757d; color: white; text-decoration: none; border-radius: 5px;">Выйти</a>
+    </div>
+
+    <h2>Ваши заказы</h2>
+    {% if orders_with_items %}
+    {% for oi in orders_with_items %}
+    <div class="order">
+        <h3>Заказ №{{ oi.order.order_id }}</h3>
+        <p><strong>Статус:</strong> {{ oi.order.order_status }}</p>
+        <p><strong>Скидка:</strong> {{ oi.order.discount.discount_name|default:"Нет" }}</p>
+        <p><strong>Итого:</strong> {{ oi.order.get_total_amount|default:"—" }} руб.</p>
+        <p><strong>Возврат возможен:</strong> {{ oi.refund_possibility|yesno:"Да,Нет" }}</p>
+        <p><strong>Менеджер:</strong> {{ oi.order.employee.employee_name|default:"Не назначен" }}</p>
+        <p><strong>Телефон менеджера:</strong> {{ oi.manager_phone }}</p>
+        {% if oi.order.client_feedback %}
+        <p><strong>Ваш отзыв:</strong> {{ oi.order.client_feedback }}</p>
+        {% endif %}
+        {% if oi.can_review %}
+        <div>
+            <textarea id="feedback-{{ oi.order.order_id }}" placeholder="Оставьте отзыв о заказе" rows="3" style="width: 100%; margin: 10px 0;"></textarea>
+            <button onclick="submitFeedback({{ oi.order.order_id }})">Оставить отзыв</button>
+        </div>
+        {% endif %}
+
+        <h4>Товары в заказе:</h4>
+        {% for item in oi.items %}
+        <div class="item">
+            {{ item.product.product_name }} — {{ item.quantity }} шт.
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <p>У вас пока нет заказов.</p>
+    {% endif %}
+
+    <a href="{% url 'product_catalog' client_id=client.client_id %}">
+        <button>Оформить новый заказ</button>
+    </a>
+
+    <script>
+        function submitFeedback(orderId) {
+            const feedbackText = document.getElementById('feedback-' + orderId).value.trim();
+            if (!feedbackText) {
+                alert('Пожалуйста, введите отзыв');
+                return;
+            }
+            
+            fetch('{% url "submit_feedback" order_id=0 %}'.replace('0', orderId), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ feedback: feedbackText })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Отзыв успешно добавлен!');
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + (data.message || 'неизвестная'));
+                }
+            })
+            .catch(error => {
+                alert('Ошибка при отправке отзыва: ' + error);
+            });
+        }
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Панель администратора</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Панель администратора</h2>
+            <a href="{% url 'admin_logout' %}" class="btn btn-secondary">Выйти</a>
+        </div>
+
+        <ul class="nav nav-tabs mb-4">
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#orders">Заказы</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#clients">Клиенты</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#products">Товары</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#inventory">Склад</a></li>
+            <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#managers">Менеджеры</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#discounts">Скидки</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#reports">Отчёты</a></li>
+        </ul>
+
+        <div class="tab-content">
+
+            <!-- Заказы -->
+            <div id="orders" class="tab-pane">
+                <h4>Все заказы</h4>
+                <button class="btn btn-primary mb-3" onclick="showCreateOrder()">Создать заказ</button>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Дата</th>
+                                <th>Клиент</th>
+                                <th>Статус</th>
+                                <th>Сумма</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in all_orders %}
+                            <tr>
+                                <td>{{ order.order_id }}</td>
+                                <td>{{ order.order_time|date:"d.m.Y H:i" }}</td>
+                                <td>{{ order.client_name }}</td>
+                                <td>
+                                    <select class="form-select form-select-sm"
+                                        onchange="updateOrderStatus({{ order.order_id }}, this.value)">
+                                        <option value="new" {% if order.order_status=="new" %}selected{% endif %}>Новый
+                                        </option>
+                                        <option value="in_progress" {% if order.order_status=='in_progress' %}selected{%
+                                            endif %}>В работе</option>
+                                        <option value="shipped" {% if order.order_status=='shipped' %}selected{% endif
+                                            %}>Отправлен</option>
+                                        <option value="delivered" {% if order.order_status=='delivered' %}selected{%
+                                            endif %}>Доставлен</option>
+                                    </select>
+                                </td>
+                                <td>{{ order.total_amount }} ₽</td>
+                                <td><button class="btn btn-sm btn-warning"
+                                        onclick="editOrder({{ order.order_id }})">Редактировать</button></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Клиенты -->
+            <div id="clients" class="tab-pane">
+                <h4>Клиенты</h4>
+                <button class="btn btn-primary mb-3" onclick="showCreateClient()">Создать клиента</button>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>ФИО</th>
+                                <th>Телефон</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for client in clients %}
+                            <tr>
+                                <td>{{ client.client_id }}</td>
+                                <td>{{ client.client_fio }}</td>
+                                <td>{{ client.client_phone|default:"—" }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning"
+                                        onclick="editClient({{ client.client_id }})">Редактировать</button>
+                                    <button class="btn btn-sm btn-danger"
+                                        onclick="deleteClient({{ client.client_id }})">Удалить</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Товары -->
+            <div id="products" class="tab-pane">
+                <h4>Товары</h4>
+                <button class="btn btn-primary mb-3" onclick="showCreateProduct()">Добавить товар</button>
+                <button class="btn btn-success mb-3" onclick="showCreateCategory()">Создать категорию</button>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Название</th>
+                                <th>Цена</th>
+                                <th>Категория</th>
+                                <th>Возврат</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                            <tr>
+                                <td>{{ product.product_id }}</td>
+                                <td>{{ product.product_name }}</td>
+                                <td>{{ product.product_price_for_sale }} ₽</td>
+                                <td>{{ product.category_name }}</td>
+                                <td>{{ product.refund_possibility }}</td>
+                                <td><button class="btn btn-sm btn-warning"
+                                        onclick="editProduct({{ product.product_id }}, '{{ product.product_name }}', {{ product.product_price_for_sale }}, {{ product.category_id }}, '{{ product.refund_possibility }}')">Редактировать</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Склад -->
+            <div id="inventory" class="tab-pane">
+                <h4>Склад</h4>
+                <button class="btn btn-primary mb-3" onclick="showAddShipment()">Добавить поставку</button>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Лот ID</th>
+                                <th>Товар</th>
+                                <th>На складе</th>
+                                <th>В пути</th>
+                                <th>Дата поступления</th>
+                                <th>Закупочная цена</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in inventory %}
+                            <tr>
+                                <td>{{ item.lot_id }}</td>
+                                <td>{{ item.product_name }}</td>
+                                <td>{{ item.quantity_current }}</td>
+                                <td>{{ item.quantity_in_transit }}</td>
+                                <td>{{ item.product_date_of_receipt }}</td>
+                                <td>{{ item.purchase_price }} ₽</td>
+                                <td><button class="btn btn-sm btn-warning"
+                                        onclick="editInventory({{ item.lot_id }}, {{ item.quantity_current }}, {{ item.quantity_in_transit }}, {{ item.purchase_price }})">Редактировать</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Менеджеры -->
+            <div id="managers" class="tab-pane active">
+                <h4>Менеджеры</h4>
+                <button class="btn btn-primary mb-3" onclick="showCreateManager()">Добавить менеджера</button>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Имя</th>
+                                <th>Логин</th>
+                                <th>Клиенты</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for manager in managers %}
+                            <tr>
+                                <td>{{ manager.employee_id }}</td>
+                                <td>{{ manager.employee_name }}</td>
+                                <td>{{ manager.login|default:"—" }}</td>
+                                <td>
+                                    <ul style="padding-left: 15px; margin: 0;">
+                                        {% for client in manager_clients|get_item:manager.employee_id %}
+                                        <li>{{ client.client_fio }} ({{ client.client_phone }})</li>
+                                        {% empty %}
+                                        <li><em>Нет клиентов</em></li>
+                                        {% endfor %}
+                                    </ul>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning"
+                                        onclick="editManager({{ manager.employee_id }}, '{{ manager.employee_name }}', '{{ manager.login|default:"" }}')">Редактировать</button>
+                                    <button class="btn btn-sm btn-info"
+                                        onclick="assignClientsToManager({{ manager.employee_id }})">Добавить
+                                        клиентов</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Скидки -->
+            <div id="discounts" class="tab-pane">
+                <h4>Скидки</h4>
+                <button class="btn btn-primary mb-3" onclick="showCreateDiscount()">Добавить скидку</button>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Название</th>
+                                <th>Процент</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for discount in discounts %}
+                            <tr>
+                                <td>{{ discount.discount_id }}</td>
+                                <td>{{ discount.discount_name }}</td>
+                                <td>{{ discount.discount_percent }}%</td>
+                                <td><button class="btn btn-sm btn-warning"
+                                        onclick="editDiscount({{ discount.discount_id }}, '{{ discount.discount_name }}', {{ discount.discount_percent }})">Редактировать</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Отчёты -->
+            <div id="reports" class="tab-pane">
+                <h4>Выручка по категориям</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Категория</th>
+                                <th>Выручка</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in category_revenue %}
+                            <tr>
+                                <td>{{ item.category_name }}</td>
+                                <td>{{ item.revenue }} ₽</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <h4 class="mt-4">Отчёт по месяцам</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Месяц</th>
+                                <th>Заказов</th>
+                                <th>Выручка</th>
+                                <th>Средний чек</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for report in sales_report %}
+                            <tr>
+                                <td>{{ report.sale_month|date:"Y-m" }}</td>
+                                <td>{{ report.total_orders }}</td>
+                                <td>{{ report.total_revenue }} ₽</td>
+                                <td>{{ report.avg_order_value }} ₽</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Вспомогательная функция для получения значения из объекта по ключу (для manager_clients)
+        window.get_item = function (obj, key) {
+            return obj[key] || [];
+        };
+
+        function updateOrderStatus(orderId, status) {
+            $.ajax({
+                url: '{% url "admin_update_order_status" %}',
+                type: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                data: JSON.stringify({ order_id: orderId, new_status: status }),
+                success: () => { alert('Статус обновлён'); location.reload(); },
+                error: () => alert('Ошибка')
+            });
+        }
+
+        function showCreateOrder() {
+            let clients = '{% for c in clients %}{{ c.client_id }} - {{ c.client_fio }}\n{% endfor %}';
+            const clientId = prompt('Доступные клиенты:\n' + clients + '\nВведите ID клиента:');
+            if (!clientId) return;
+            $.ajax({
+                url: '{% url "admin_create_order" %}',
+                type: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                data: JSON.stringify({ client_id: clientId, order_channel: 'admin' }),
+                success: () => { alert('Заказ создан'); location.reload(); },
+                error: () => alert('Ошибка')
+            });
+        }
+
+        function editOrder(orderId) {
+            let discounts = '{% for d in discounts %}{{ d.discount_id }} - {{ d.discount_name }}\n{% endfor %}';
+            const discountId = prompt('Доступные скидки:\n' + discounts + '\nВведите ID скидки (или оставьте пустым):') || null;
+            $.ajax({
+                url: '{% url "admin_update_order" %}',
+                type: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                data: JSON.stringify({ order_id: orderId, discount_id: discountId }),
+                success: () => { alert('Заказ обновлён'); location.reload(); },
+                error: () => alert('Ошибка')
+            });
+        }
+
+        function showCreateManager() {
+            const name = prompt('Имя менеджера:');
+            if (!name) return;
+            const login = prompt('Логин:') || null;
+            const password = prompt('Пароль:') || null;
+            $.ajax({
+                url: '{% url "admin_create_manager" %}',
+                type: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                data: JSON.stringify({ employee_name: name, login: login, password: password }),
+                success: () => { alert('Менеджер создан'); location.reload(); },
+                error: (xhr) => alert('Ошибка: ' + (xhr.responseJSON?.message || 'неизвестная'))
+            });
+        }
+
+        function editManager(id, name, login) {
+            const newName = prompt('Имя:', name);
+            if (!newName) return;
+            const newLogin = prompt('Логин:', login) || null;
+            $.ajax({
+                url: '{% url "admin_update_manager" %}',
+                type: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                data: JSON.stringify({ employee_id: id, employee_name: newName, login: newLogin }),
+                success: () => { alert('Менеджер обновлён'); location.reload(); },
+                error: () => alert('Ошибка')
+            });
+        }
+
+        function assignClientsToManager(managerId) {
+            let clients = '{% for c in clients %}{{ c.client_id }} - {{ c.client_fio }}\n{% endfor %}';
+            const clientId = prompt('Доступные клиенты:\n' + clients + '\nВведите ID клиента:');
+            if (!clientId) return;
+            $.ajax({
+                url: '{% url "admin_assign_client_to_manager" %}',
+                type: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                data: JSON.stringify({ client_id: parseInt(clientId), employee_id: managerId }),
+                success: () => { alert('Клиент назначен менеджеру'); location.reload(); },
+                error: (xhr) => alert('Ошибка: ' + (xhr.responseJSON?.message || 'неизвестная'))
+            });
+        }
+
+        function showCreateDiscount() {
+            const name = prompt('Название скидки:');
+            if (!name) return;
+            const percent = prompt('Процент:');
+            if (!percent) return;
+            $.ajax({
+                url: '{% url "admin_create_discount" %}',
+                type: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                data: JSON.stringify({ discount_name: name, discount_percent: percent }),
+                success: () => { alert('Скидка создана'); location.reload(); },
+                error: (xhr) => alert('Ошибка: ' + (xhr.responseJSON?.message || 'неизвестная'))
+            });
+        }
+
+        function editDiscount(id, name, percent) {
+            const newName = prompt('Название:', name);
+            if (!newName) return;
+            const newPercent = prompt('Процент:', percent);
+            if (!newPercent) return;
+            $.ajax({
+                url: '{% url "admin_update_discount" %}',
+                type: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                data: JSON.stringify({ discount_id: id, discount_name: newName, discount_percent: newPercent }),
+                success: () => { alert('Скидка обновлена'); location.reload(); },
+                error: () => alert('Ошибка')
+            });
+        }
+
+        function editInventory(lotId, qty, transit, price) {
+            const newQty = prompt('На складе:', qty);
+            if (!newQty) return;
+            const newTransit = prompt('В пути:', transit);
+            if (!newTransit) return;
+            const newPrice = prompt('Закупочная цена:', price);
+            if (!newPrice) return;
+            $.ajax({
+                url: '{% url "admin_update_inventory" %}',
+                type: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                data: JSON.stringify({ lot_id: lotId, quantity_current: newQty, quantity_in_transit: newTransit, purchase_price: newPrice }),
+                success: () => { alert('Склад обновлён'); location.reload(); },
+                error: () => alert('Ошибка')
+            });
+        }
+
+        function showAddShipment() {
+            let products = '{% for p in products %}{{ p.product_id }} - {{ p.product_name }}\n{% endfor %}';
+            const productId = prompt('Доступные товары:\n' + products + '\nВведите ID товара:');
+            if (!productId) return;
+            const current = prompt('Количество на складе:', '0');
+            const inTransit = prompt('Количество в пути:', '0');
+            const date = prompt('Дата поступления (YYYY-MM-DD):', '');
+            const price = prompt('Закупочная цена:', '0.0');
+
+            $.ajax({
+                url: '{% url "admin_add_shipment" %}',
+                type: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                data: JSON.stringify({
+                    product_id: parseInt(productId),
+                    quantity_current: parseInt(current),
+                    quantity_in_transit: parseInt(inTransit),
+                    product_date_of_receipt: date,
+                    purchase_price: parseFloat(price)
+                }),
+                success: () => { alert('Поставка добавлена'); location.reload(); },
+                error: (xhr) => alert('Ошибка: ' + (xhr.responseJSON?.message || 'неизвестная'))
+            });
+        }
+
+        function showCreateClient() {
+            const fio = prompt('Введите ФИО клиента:');
+            if (!fio) return;
+            const phone = prompt('Введите телефон (обязательно):');
+            if (!phone) { alert('Телефон обязателен!'); return; }
+            const login = prompt('Введите логин:') || null;
+            const password = prompt('Введите пароль:') || null;
+
+            $.ajax({
+                url: '{% url "admin_create_client" %}',
+                type: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                data: JSON.stringify({ client_fio: fio, client_phone: phone, login: login, password: password }),
+                success: () => { alert('Клиент создан'); location.reload(); },
+                error: (xhr) => alert('Ошибка: ' + (xhr.responseJSON?.message || 'неизвестная'))
+            });
+        }
+
+        function editClient(clientId) {
+            const newFio = prompt('Введите новое ФИО:');
+            if (!newFio) return;
+            const newPhone = prompt('Введите новый телефон (необязательно):') || null;
+
+            $.ajax({
+                url: '{% url "admin_update_client" %}',
+                type: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                data: JSON.stringify({ client_id: clientId, new_fio: newFio, new_phone: newPhone }),
+                success: () => { alert('Клиент обновлён'); location.reload(); },
+                error: (xhr) => alert('Ошибка: ' + (xhr.responseJSON?.message || 'неизвестная'))
+            });
+        }
+
+        function deleteClient(clientId) {
+            if (!confirm('Удалить клиента?')) return;
+            $.ajax({
+                url: '{% url "admin_delete_client" %}',
+                type: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                data: JSON.stringify({ client_id: clientId }),
+                success: () => { alert('Клиент удалён'); location.reload(); },
+                error: () => alert('Ошибка')
+            });
+        }
+
+        function showCreateProduct() {
+            const name = prompt('Введите название товара:');
+            if (!name) return;
+            const price = prompt('Введите цену:');
+            if (!price) return;
+            let cats = '{% for cat in categories %}{{ cat.category_id }} - {{ cat.category_name }}\n{% endfor %}';
+            const categoryId = prompt('Доступные категории:\n' + cats + '\nВведите ID категории:') || '1';
+            const refund = prompt('Возврат возможен? (yes/no):', 'no');
+
+            $.ajax({
+                url: '{% url "admin_create_product" %}',
+                type: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                data: JSON.stringify({ product_name: name, price: price, category_id: categoryId, refund_possibility: refund }),
+                success: () => { alert('Товар создан'); location.reload(); },
+                error: (xhr) => alert('Ошибка: ' + (xhr.responseJSON?.message || 'неизвестная'))
+            });
+        }
+
+        function editProduct(id, name, price, catId, refund) {
+            const newName = prompt('Название:', name);
+            if (!newName) return;
+            const newPrice = prompt('Цена:', price);
+            if (!newPrice) return;
+            let cats = '{% for cat in categories %}{{ cat.category_id }} - {{ cat.category_name }}\n{% endfor %}';
+            const newCatId = prompt('Доступные категории:\n' + cats + '\nID категории:', catId);
+            const newRefund = prompt('Возврат (yes/no):', refund);
+
+            $.ajax({
+                url: '{% url "admin_update_product" %}',
+                type: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                data: JSON.stringify({ product_id: id, product_name: newName, price: newPrice, category_id: newCatId, refund_possibility: newRefund }),
+                success: () => { alert('Товар обновлён'); location.reload(); },
+                error: (xhr) => alert('Ошибка: ' + (xhr.responseJSON?.message || 'неизвестная'))
+            });
+        }
+
+        function showCreateCategory() {
+            const name = prompt('Введите название категории:');
+            if (!name) return;
+
+            $.ajax({
+                url: '{% url "admin_create_category" %}',
+                type: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                data: JSON.stringify({ category_name: name }),
+                success: () => { alert('Категория создана'); location.reload(); },
+                error: (xhr) => alert('Ошибка: ' + (xhr.responseJSON?.message || 'неизвестная'))
+            });
+        }
+    </script>
+</body>
+
+</html>
